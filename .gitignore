@@ -1,0 +1,5 @@
+*.beam
+*.boot
+*.script
+*.rel
+erl_crash.dump
