@@ -14,35 +14,39 @@
 -compile(export_all).
 -endif.
 
-write(PropLists, To) ->
-  Strings = format_section_proplists(lists:reverse(PropLists)),
-  Str = string:join(Strings, "\n"),
+write(Loc, Repos) ->
+  Binary = format_repos(Repos),
+  file:write_file(Loc, Binary).
 
-  {ok, Fd} = file:open(To, [write]),
-  file:write(Fd, Str),
-  file:close(Fd),
+write(Loc, Repos, Groups) ->
+  {ok, F} = file:open(Loc, [write]),
+  GroupsBin = format_groups(Groups),
+  file:write(F, GroupsBin),
+  ReposBin = format_repos(Repos),
+  file:write(F, ReposBin),
+  file:close(F),
   ok.
 
-format_section_proplists(SectionProplists) ->
-  format_section_proplists(SectionProplists, []).
-format_section_proplists([], Acc) -> lists:reverse(Acc);
-format_section_proplists([{SectionTitle, SectionProplists}|Rest], Acc) ->
-  Title =
-    lists:append(["\n", "[", erlang:atom_to_list(SectionTitle), "]", "\n"]),
-  SectionStrings =
-    lists:append([Title,
-                  string:join(format_value_proplists(SectionProplists), "\n")]),
-  format_section_proplists(Rest, [SectionStrings|Acc]).
+format_groups(Groups) ->
+  format_groups(Groups, []).
 
-format_value_proplists(PropLists) ->
-  format_proplist(PropLists, []).
-format_proplist([], Acc) -> lists:reverse(Acc);
-format_proplist([{Title, Values}|Rest], Acc) ->
-  case Values of
-    [] -> format_proplist(Rest, Acc);
-    _ ->
-      Equals = lists:map(fun(Val) -> lists:append([" ", Val]) end, Values),
-      Line = lists:flatten([erlang:atom_to_list(Title), " ", "=", Equals]),
-      format_proplist(Rest, [Line|Acc])
-  end.
+format_groups([], List) ->
+  list_to_binary(lists:flatten([List, "\n"]));
+format_groups([Group|Rest], List) ->
+  {Name, Users} = Group,
+  UsersText = lists:map(fun(U) -> U ++ " " end, Users),
+  GroupText = lists:flatten(["@", Name, " = ", UsersText, "\n"]),
+  format_groups(Rest, [GroupText|List]).
 
+
+format_repos(Repos) ->
+   format_repos(Repos, []).
+
+format_repos([], List) ->
+  list_to_binary(lists:flatten(List));
+format_repos([Repo|Rest], List) ->
+  {Name, Users} = Repo,
+  NameLine = "  repo " ++ Name ++ "\n",
+  UsersText = lists:map(fun(U) -> U ++ " " end, Users),
+  RepoText = lists:flatten([NameLine, "    RW+ = ", UsersText, "\n\n"]),
+  format_repos(Rest, [RepoText|List]).

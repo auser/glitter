@@ -2,22 +2,40 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
-format_test_() ->
-  [
-   ?_assertEqual(["hello = world"],
-                 conf_writer:format_value_proplists([{hello, ["world"]}])),
-   ?_assertEqual(["so_long = thanks for all the fish"],
-                 conf_writer:format_value_proplists([{so_long, ["thanks", "for", "all", "the", "fish"]}])),
-   ?_assertEqual(["hello = world", "they = are here"],
-                 conf_writer:format_value_proplists([{hello, ["world"]},
-                                                     {they, ["are here"]}]))
-  ].
+write_config_test_() ->
+  {inorder,
+   [
+    fun with_no_usergroup/0,
+    fun with_usergroup/0
+   ]
+  }.
 
-format_section_test_() ->
-  Props = [{'group anothergroup',[{members,["alice","bill"]}]}],
-  [
-   ?_assertEqual(["\n[group anothergroup]\nmembers = alice bill"],
-                 conf_writer:format_section_proplists(Props))
-  ].
+-define(WRITE_TEST, "../test/writetest.conf").
 
+with_no_usergroup() ->
+  clear_file(),
+  Repos = [{"a_repo", ["user_1", "user_2"]}],
 
+  conf_writer:write(?WRITE_TEST, Repos),
+  {ok, File} = file:read_file(?WRITE_TEST),
+  ?assertEqual("  repo a_repo\n    RW+ = user_1 user_2 \n\n",
+               binary_to_list(File)),
+  passed.
+
+with_usergroup() ->
+  clear_file(),
+  Repos = [{"a_repo", ["@group"]}],
+  UserGroups = [{"group", ["user_1", "user_2"]}],
+
+  conf_writer:write(?WRITE_TEST, Repos, UserGroups),
+
+  {ok, File} = file:read_file(?WRITE_TEST),
+  ?assertEqual("@group = user_1 user_2 \n\n  repo a_repo\n    RW+ = @group \n\n",
+               binary_to_list(File)),
+  passed.
+
+clear_file() ->
+  case(filelib:is_file(?WRITE_TEST)) of
+    true -> file:delete(?WRITE_TEST);
+    _ -> ok
+  end.

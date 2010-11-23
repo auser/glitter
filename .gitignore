@@ -4,3 +4,4 @@
 *.rel
 erl_crash.dump
 .eunit
+test/*.conf
