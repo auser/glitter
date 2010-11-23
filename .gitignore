@@ -3,3 +3,4 @@
 *.script
 *.rel
 erl_crash.dump
+.eunit

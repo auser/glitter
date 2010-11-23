@@ -1,19 +1,18 @@
 %%%-------------------------------------------------------------------
 %%% File    : conf_reader.erl
 %%% Author  : Ari Lerner
-%%% Description : 
+%%% Description :
 %%%
 %%% Created :  Fri Dec 18 19:12:44 PST 2009
 %%%-------------------------------------------------------------------
 
 -module (conf_reader).
 
--ifdef (debug).
--include_lib("eunit/include/eunit.hrl").
--endif.
-
--import(lists, [reverse/1]).
 -export([parse_file/1,parse/1]).
+
+-ifdef (TEST).
+-compile(export_all).
+-endif.
 
 -record (state, {
   state = none,         % gitosis_config | group_config | repos_config | other
@@ -57,15 +56,15 @@ parse_section(<<>>, State) ->
 parse_section(Rest, #state{configs = Config} = State) ->
   {Title, NextLine} = parse_section_title(Rest),
   {{SectionTitle, SectionProps} = Section, NextSection} = parse_config_section(NextLine, #section{title = Title}),
-  
+
   NewState = case proplists:get_value(SectionTitle, Config) of
     undefined -> State#state{configs = lists:flatten([Section|Config])};
     Current -> State#state{configs = lists:flatten([SectionProps|Current])}
   end,
   parse_section(NextSection, NewState).
-  
+
 % Parse the config section
-parse_config_section(<<$[,Rest/binary>>, #section{title = Title, proplist = Proplists} = _Section) -> 
+parse_config_section(<<$[,Rest/binary>>, #section{title = Title, proplist = Proplists} = _Section) ->
   {{Title, Proplists}, Rest};
 parse_config_section(<<>>, #section{title = Title, proplist = Proplists} = _Section) ->
   {{Title, Proplists}, <<>>};
@@ -73,8 +72,8 @@ parse_config_section(<<$=,Rest/binary>>, #section{current_key = CurrentKey, prop
   CurrentKey1 = erlang:list_to_atom(chomp(CurrentKey)),
   {Values, NextLine} = parse_values(Rest, [], []),
   parse_config_section(NextLine, Section#section{
-    current_key = [], 
-    current_values = [], 
+    current_key = [],
+    current_values = [],
     current_value = [],
     proplist = [{CurrentKey1, Values}|Proplists]
     });
@@ -84,9 +83,9 @@ parse_config_section(<<$#,Rest/binary>>, State) -> parse_config_section(skip_to_
 parse_config_section(<<$\n,Rest/binary>>, #section{current_key = []} = Section) -> parse_config_section(Rest, Section);
 parse_config_section(<<$\n,Rest/binary>>, #section{current_key = K, current_values = Vals, proplist = Props} = Section) ->
   parse_config_section(Rest, Section#section{
-    current_key = [], 
-    current_values = [], 
-    current_value = [], 
+    current_key = [],
+    current_values = [],
+    current_value = [],
     proplist = [{K,Vals}|Props]
   });
 
@@ -99,7 +98,7 @@ parse_config_section(<<$\r,Rest/binary>>, #section{} = Section) -> parse_config_
 % Parse values
 % hello
 % hello world
-parse_values(<<$\n,Rest/binary>>, Acc, CurrVals) -> 
+parse_values(<<$\n,Rest/binary>>, Acc, CurrVals) ->
   Val = case CurrVals of
     [] -> [chomp(Acc)];
     _ -> [chomp(Acc)|CurrVals]
@@ -122,7 +121,7 @@ parse_values(<<>>, Acc, CurrVals) ->
   {Val, <<>>};
 parse_values(<<Chr,Rest/binary>>, Acc, CurrVals) ->
   parse_values(Rest, [Chr|Acc], CurrVals).
-  
+
 % skip_to_new_line
 skip_to_new_line(Rest) -> skip_to_new_line1(Rest).
 skip_to_new_line1(<<$\n,Rest/binary>>) ->  Rest;
@@ -132,43 +131,11 @@ skip_to_new_line1(<<_Ch,Rest/binary>>) -> skip_to_new_line1(Rest).
 
 % Parse section titles
 parse_section_title(Bin) -> parse_section_title(Bin, []).
-parse_section_title(<<$],Rest/binary>>, Acc) -> {erlang:list_to_atom(lists:reverse(Acc)), Rest};
-parse_section_title(<<Ch,Rest/binary>>, Acc) -> parse_section_title(Rest, [Ch|Acc]).
+parse_section_title(<<$],Rest/binary>>, Acc) ->
+  {erlang:list_to_atom(lists:reverse(Acc)), Rest};
+parse_section_title(<<Ch,Rest/binary>>, Acc) ->
+  parse_section_title(Rest, [Ch|Acc]).
 
 % Chomp the string for erroneous whitespace before and after
-chomp(Str) -> 
+chomp(Str) ->
   lists:reverse(string:strip(Str)).
-
--ifdef (debug).
-
-chomp_test_() ->
-  [
-    ?_assertEqual(chomp(lists:reverse(" hello")), "hello"),
-    ?_assertEqual(chomp(lists:reverse("hello ")), "hello"),
-    ?_assertEqual(chomp(lists:reverse("hello world")), "hello world"),
-    ?_assertEqual(lists:reverse(chomp(" hello   ")), "hello")
-  ].
-skip_to_new_line_test_() ->
-  [
-    ?_assertEqual(skip_to_new_line(<<"hello\nworld">>), <<"world">>),
-    ?_assertEqual(skip_to_new_line(<<"hello\r world">>), <<>>),
-    ?_assertEqual(skip_to_new_line(<<"hello world\ngoodnight moon">>), <<"goodnight moon">>)
-  ].
-parse_section_title_test_() ->
-  [
-    ?_assertEqual(parse_section_title(<<"box]">>), {box, <<>>}),
-    ?_assertEqual(parse_section_title(<<"box]\n\n#hello world\n">>), {box, <<"\n\n#hello world\n">>})
-  ].
-
-full_parse_test_() ->
-  Data = parse_file("env/gitosis.conf"),
-  GitosisVal = proplists:get_value(gitosis, Data),
-  AnotherGroup = proplists:get_value('group anothergroup', Data),
-  TestRepos = proplists:get_value('group test_repos', Data),
-  [
-    ?_assertEqual([{members, ["alice", "bill"]}], AnotherGroup),
-    ?_assertEqual([], TestRepos),
-    ?_assertEqual([{gitweb, ["no"]}], GitosisVal)
-  ].
-  
--endif.

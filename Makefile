@@ -20,12 +20,9 @@ boot:
 
 debug:
 	@$(ERL) -pa $(EBIN_DIRS) -pa $(EBIN) -noinput +B -eval 'case make:all([{d, debug}]) of up_to_date -> halt(0); error -> halt(1) end.'
-	
-test: debug
-	$(ERL) 	-noshell -pa $(EBIN) \
-					-pa deps/*/ebin \
-					-s conf_reader test \
-					-s conf_writer test \
-					-s init stop
+
+test: compile
+	@./rebar eunit
+
 clean:
-	rm -rf $(EBIN)/*.beam $(EBIN)/erl_crash.dump erl_crash.dump $(EBIN)/*.boot $(EBIN)/*.rel $(EBIN)/*.script $(EBIN)/$(APP)-*.tar.gz *.log
+	rm -rf $(EBIN)/*.beam $(EBIN)/erl_crash.dump erl_crash.dump $(EBIN)/*.boot $(EBIN)/*.rel $(EBIN)/*.script $(EBIN)/$(APP)-*.tar.gz *.log .eunit

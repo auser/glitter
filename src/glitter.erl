@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : glitter.erl
 %%% Author  : Ari Lerner
-%%% Description : 
+%%% Description :
 %%%
 %%% Created :  Sun Dec 20 13:29:52 PST 2009
 %%%-------------------------------------------------------------------
@@ -57,7 +57,7 @@ make_repos_private(Name) -> gen_server:call(?SERVER, {make_repos_private, Name})
 flush() -> gen_server:cast(?SERVER, {flush}).
 reload() -> gen_server:call(?SERVER, {reload}).
 commit() -> gen_server:cast(?SERVER, {commit}).
-  
+
 %%--------------------------------------------------------------------
 %% Function: start_link() -> {ok,Pid} | ignore | {error,Error}
 %% Description: Starts the server
@@ -178,7 +178,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 handle_add_config(Proplist, Config, State) ->
   NewConfig = case proplists:get_value(gitosis, Config) of
-    undefined -> 
+    undefined ->
       [{gitosis, Proplist}|Config];
     GitosisConfig ->
       OldConfig = lists:delete(gitosis, Config),
@@ -193,12 +193,12 @@ handle_list_repos([], Acc) -> lists:reverse(Acc);
 handle_list_repos([{K, _V}|Rest], Acc) ->
   Key = erlang:atom_to_list(K),
   case string:substr(Key, 1, 6) =:= "group " of
-    true -> 
+    true ->
       Name = string:substr(Key, 7, string:len(Key)),
       handle_list_repos(Rest, [Name|Acc]);
     false -> handle_list_repos(Rest, Acc)
   end.
-  
+
 handle_add_repos(undefined, _Config, State) -> State;
 handle_add_repos(Name, Config, State) ->
   GroupName = erlang:list_to_atom(lists:append(["group ", Name])),
@@ -206,7 +206,7 @@ handle_add_repos(Name, Config, State) ->
     undefined ->
       % New repos
       [{GroupName, [{writable, [Name]}]}|Config];
-    _ -> 
+    _ ->
       Config
   end,
   NewState = State#state{config = NewConfig},
@@ -226,13 +226,13 @@ handle_remove_repos(Name, Config, State) ->
 
 handle_add_user_to_repos(Name, UserName, Type, #state{config = Config} = State) ->
   case find_already_defined_repos(Name, Config) of
-    {error, not_found} -> 
+    {error, not_found} ->
       NewState = handle_add_repos(Name, Config, State),
       handle_add_user_to_repos(Name, UserName, Type, NewState);
     {ok, Key, Repos} ->
       NewReposConfig = case proplists:get_value(Type, Repos) of
         undefined -> [{Type, [UserName]}|Repos];
-        CurrentMembers -> 
+        CurrentMembers ->
           case lists:member(UserName, CurrentMembers) of
             false ->
               OldRepos = proplists:delete(Type, Repos),
@@ -246,14 +246,14 @@ handle_add_user_to_repos(Name, UserName, Type, #state{config = Config} = State) 
       flush(NewState),
       NewState
   end.
-  
+
 handle_remove_user_from_repos(Name, UserName, Type, #state{config = Config} = State) ->
   case find_already_defined_repos(Name, Config) of
     {error, not_found} -> ok;
     {ok, Key, ReposConfig} ->
       NewReposConfig = case proplists:get_value(Type, ReposConfig) of
         undefined -> [{Type, [Name]}|ReposConfig];
-        CurrentMembers -> 
+        CurrentMembers ->
           case lists:member(UserName, CurrentMembers) of
             true ->
               OldRepos = proplists:delete(Type, ReposConfig),
@@ -271,7 +271,7 @@ handle_remove_user_from_repos(Name, UserName, Type, #state{config = Config} = St
 
 handle_add_new_user_and_key(UserName, Pubkey, #state{gitosis_config = ConfigFile} = State) ->
   case find_file_by_name(UserName, State) of
-    {error, not_found} -> 
+    {error, not_found} ->
       Dirname = filename:dirname(ConfigFile),
       PubKeyfile = filename:join([Dirname, "keydir", lists:append(UserName, ".pub")]),
       {ok, Fd} = file:open(PubKeyfile, [write]),
@@ -280,18 +280,18 @@ handle_add_new_user_and_key(UserName, Pubkey, #state{gitosis_config = ConfigFile
     {ok, _Pubname}  -> ok
   end,
   State.
-  
+
 handle_make_repos_public(Name, State) ->
   handle_change_repos_config(Name, daemon, ["yes"], State).
 handle_make_repos_private(Name, State) ->
   handle_change_repos_config(Name, daemon, ["no"], State).
-    
+
 handle_change_repos_config(RepoName, ConfigKey, ConfigVal, #state{config = Config} = State) ->
   case find_already_defined_repos(RepoName, Config) of
     {error, not_found} -> ok;
     {ok, Key, ReposConfig} ->
       NewReposConfig = case proplists:get_value(ConfigKey, ReposConfig) of
-        undefined -> 
+        undefined ->
           [{ConfigKey, ConfigVal}|ReposConfig];
         Status ->
           case Status =:= ConfigVal of
@@ -307,7 +307,7 @@ handle_change_repos_config(RepoName, ConfigKey, ConfigVal, #state{config = Confi
       flush(NewState),
       NewState
   end.
-  
+
 find_already_defined_repos(_Name, []) -> {error, not_found};
 find_already_defined_repos(Name, [{K, V}|Rest]) ->
   Key = erlang:atom_to_list(K),
@@ -333,7 +333,7 @@ find_file_by_name1(Name, [K|Rest]) ->
 
 handle_commit(ConfigFile) ->
   Dirname = filename:dirname(ConfigFile),
-  Command = lists:append(["cd ", Dirname, " && ", 
+  Command = lists:append(["cd ", Dirname, " && ",
     "git add . && ",
     "git commit -a -m 'Updated from glitter'", " && ", "git push origin master"]),
   Out = os:cmd(Command),
