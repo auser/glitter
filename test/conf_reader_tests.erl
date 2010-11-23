@@ -24,14 +24,7 @@ parse_section_title_test_() ->
   ].
 
 
-%% full_parse_test_() ->
-%%   Data = conf_reader:parse_file("env/gitosis.conf"),
-%%   GitosisVal = proplists:get_value(gitosis, Data),
-%%   AnotherGroup = proplists:get_value('group anothergroup', Data),
-%%   TestRepos = proplists:get_value('group test_repos', Data),
-%%   [
-%%     ?_assertEqual([{members, ["alice", "bill"]}], AnotherGroup),
-%%     ?_assertEqual([], TestRepos),
-%%     ?_assertEqual([{gitweb, ["no"]}], GitosisVal)
-%%   ].
+full_parse_test() ->
+  erlang:display(filelib:is_file("../test/example.conf")),
+  Data = conf_reader:parse_file("../test/example.conf").
 

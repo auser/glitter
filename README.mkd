@@ -1,0 +1,13 @@
+Glitter
+===
+
+Parse and write configs for the gitolite admin repositories.
+
+
+### Status
+
+Parsing is nonfunctional.
+Writing is nonfunctional.
+
+Working on it...
+
