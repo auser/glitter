@@ -8,11 +8,7 @@
 
 -module (conf_writer).
 
--export ([write/2]).
-
--ifdef(TEST).
--compile(export_all).
--endif.
+-export ([write/2, write/3]).
 
 write(Loc, Repos) ->
   Binary = format_repos(Repos),
