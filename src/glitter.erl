@@ -34,7 +34,7 @@
          terminate/2, code_change/3]).
 
 -record(state, {
-  gitosis_config,
+  gitolite_config,
   config
 }).
 -define(SERVER, ?MODULE).
@@ -80,7 +80,7 @@ init([]) ->
   {ok, ConfigFile} = application:get_env(glitter, config_file),
   Config = conf_reader:parse_file(ConfigFile),
   {ok, #state{
-    gitosis_config = filename:absname(ConfigFile),
+    gitolite_config = filename:absname(ConfigFile),
     config = Config
   }}.
 
@@ -123,7 +123,7 @@ handle_call({make_repos_private, Name}, _From, State) ->
 handle_call({has_git_repos, Name}, _From, #state{config = Config} = State) ->
   Reply = lists:member(Name, handle_list_repos(Config)),
   {reply, Reply, State};
-handle_call({reload}, _From, #state{gitosis_config = ConfigFile} = State) ->
+handle_call({reload}, _From, #state{gitolite_config = ConfigFile} = State) ->
   Config = conf_reader:parse_file(ConfigFile),
   {reply, ok, State#state{config = Config}};
 handle_call(_Request, _From, State) ->
@@ -139,7 +139,7 @@ handle_call(_Request, _From, State) ->
 handle_cast({flush}, State) ->
   flush(State),
   {noreply, State};
-handle_cast({commit}, #state{gitosis_config = ConfigFile} = State) ->
+handle_cast({commit}, #state{gitolite_config = ConfigFile} = State) ->
   handle_commit(ConfigFile),
   flush(State),
   Config = conf_reader:parse_file(ConfigFile),
@@ -177,12 +177,12 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%--------------------------------------------------------------------
 handle_add_config(Proplist, Config, State) ->
-  NewConfig = case proplists:get_value(gitosis, Config) of
+  NewConfig = case proplists:get_value(gitolite, Config) of
     undefined ->
-      [{gitosis, Proplist}|Config];
-    GitosisConfig ->
-      OldConfig = lists:delete(gitosis, Config),
-      [{gitosis, lists:append([Proplist,GitosisConfig])}|OldConfig]
+      [{gitolite, Proplist}|Config];
+    GitoliteConfig ->
+      OldConfig = lists:delete(gitolite, Config),
+      [{gitolite, lists:append([Proplist,GitoliteConfig])}|OldConfig]
   end,
   NewState = State#state{config = NewConfig},
   flush(NewState),
@@ -269,7 +269,7 @@ handle_remove_user_from_repos(Name, UserName, Type, #state{config = Config} = St
       NewState
   end.
 
-handle_add_new_user_and_key(UserName, Pubkey, #state{gitosis_config = ConfigFile} = State) ->
+handle_add_new_user_and_key(UserName, Pubkey, #state{gitolite_config = ConfigFile} = State) ->
   case find_file_by_name(UserName, State) of
     {error, not_found} ->
       Dirname = filename:dirname(ConfigFile),
@@ -316,10 +316,10 @@ find_already_defined_repos(Name, [{K, V}|Rest]) ->
     false -> find_already_defined_repos(Name, Rest)
   end.
 
-flush(#state{config = Config, gitosis_config = ConfigFile} = _State) ->
+flush(#state{config = Config, gitolite_config = ConfigFile} = _State) ->
   conf_writer:write(Config, ConfigFile).
 
-find_file_by_name(Name, #state{gitosis_config = ConfigFile} = _State) ->
+find_file_by_name(Name, #state{gitolite_config = ConfigFile} = _State) ->
   {ok, Files} = file:list_dir(filename:dirname(ConfigFile)),
   find_file_by_name1(Name, Files).
 
