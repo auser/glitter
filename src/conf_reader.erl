@@ -47,13 +47,13 @@ parse_line(<<$#,_/binary>>) ->
   {comment, undefined};
 parse_line(<<$\ ,Rest/binary>>) ->
   parse_line(Rest);
-parse_line(Line) ->
-  case re:run(Line, "=") of
+parse_line(Binary) ->
+  case re:run(Binary, "=") of
     {match, _} ->
-      [Permission,Name] = re:split(Line, "="),
+      [Permission,Name] = re:split(Binary, "="),
       {repo_user, {string:strip(binary_to_list(Name)),
                    string:strip(binary_to_list(Permission))}};
-    nomatch -> {nomatch, Line}
+    nomatch -> {nomatch, Binary}
   end.
 
 
