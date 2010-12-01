@@ -5,6 +5,6 @@
 full_parse_test() ->
   {state, Data} = conf_reader:parse_file("../test/example.conf"),
   [Arepo,Brepo] = Data,
-  ?assertEqual(Arepo, {"arepo", ["auser"]}),
-  ?assertEqual(Brepo, {"brepo", ["jdunphy", "auser"]}).
+  ?assertEqual(Arepo, {"arepo", [{"auser", "RW+"}]}),
+  ?assertEqual(Brepo, {"brepo", [{"jdunphy", "RW+"}, {"auser", "RW+"}]}).
 

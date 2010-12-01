@@ -10,10 +10,6 @@
 
 -export([parse_file/1,parse/1]).
 
--ifdef (TEST).
--compile(export_all).
--endif.
-
 -record (state, {
            repos = []
           }).
@@ -27,13 +23,10 @@ parse_file(FileName)  ->
   {ok, Binary} = file:read_file(FileName),
   parse(Binary).
 
-parse(X) ->
-  do_parse(X, #state{}).
+parse(Binary) ->
+  Chunks = re:split(Binary, "\\n"),
+  do_parse(Chunks, #state{}).
 
-
-do_parse(Bin, State) when is_binary(Bin) ->
-  Chunks = re:split(Bin, "\\n"),
-  do_parse(Chunks, State);
 do_parse([], State) -> State;
 do_parse([First|Lines], State) ->
   {Type, Data} = parse_line(First),
@@ -52,12 +45,15 @@ parse_line(<<$r,$e,$p,$o,Rest/binary>>) ->
   {repo, string:strip(binary_to_list(Rest))};
 parse_line(<<$#,_/binary>>) ->
   {comment, undefined};
+parse_line(<<$\ ,Rest/binary>>) ->
+  parse_line(Rest);
 parse_line(Line) ->
   case re:run(Line, "=") of
     {match, _} ->
-      [_Permission,Name] = re:split(Line, "="),
-      {repo_user, string:strip(binary_to_list(Name))};
-    nomatch -> {wtf, Line}
+      [Permission,Name] = re:split(Line, "="),
+      {repo_user, {string:strip(binary_to_list(Name)),
+                   string:strip(binary_to_list(Permission))}};
+    nomatch -> {nomatch, Line}
   end.
 
 
