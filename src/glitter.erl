@@ -195,16 +195,9 @@ handle_add_config(Proplist, Config, State) ->
   flush(NewState),
   NewState.
 
-handle_list_repos(Config) -> handle_list_repos(Config, []).
-handle_list_repos([], Acc) -> lists:reverse(Acc);
-handle_list_repos([{K, _V}|Rest], Acc) ->
-  Key = erlang:atom_to_list(K),
-  case string:substr(Key, 1, 6) =:= "group " of
-    true ->
-      Name = string:substr(Key, 7, string:len(Key)),
-      handle_list_repos(Rest, [Name|Acc]);
-    false -> handle_list_repos(Rest, Acc)
-  end.
+handle_list_repos(Config) ->
+  {state, Repos, _} = Config,
+  Repos.
 
 handle_add_repos(undefined, _Config, State) -> State;
 handle_add_repos(Name, Config, State) ->
