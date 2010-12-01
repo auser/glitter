@@ -11,7 +11,8 @@
 -export([parse_file/1,parse/1]).
 
 -record (state, {
-           repos = []
+           repos = [],
+           groups = []
           }).
 
 -record (repo, {
@@ -36,6 +37,9 @@ do_parse([First|Lines], State) ->
       Repo = {Data, Users},
       NewState = State#state{repos = State#state.repos ++ [Repo]},
       do_parse(NewLines, NewState);
+    group ->
+      NewState = State#state{groups = State#state.groups ++ [Data]},
+      do_parse(Lines, NewState);
     _ ->
       do_parse(Lines, State)
   end.
@@ -47,6 +51,11 @@ parse_line(<<$#,_/binary>>) ->
   {comment, undefined};
 parse_line(<<$\ ,Rest/binary>>) ->
   parse_line(Rest);
+parse_line(<<$@,_/binary>> = Binary) ->
+  [Name, UserChunk] = re:split(string:strip(binary_to_list(Binary)), "="),
+  Users = re:split(UserChunk, "\ "),
+  UserList = list_users(Users),
+  {group, {string:strip(binary_to_list(Name)), UserList}};
 parse_line(Binary) ->
   case re:run(Binary, "=") of
     {match, _} ->
@@ -73,3 +82,10 @@ parse_repo_users([Line|Rest], Users) ->
       parse_repo_users(Rest, NewUsers);
     {_, _} -> parse_repo_users(Rest, Users)
   end.
+
+%% Expecting a list of binaries
+list_users([]) -> [];
+list_users([<<>>|Users]) ->
+  list_users(Users);
+list_users([First|Users]) ->
+  [string:strip(binary_to_list(First))|list_users(Users)].

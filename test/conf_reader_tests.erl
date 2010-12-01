@@ -3,8 +3,10 @@
 -include_lib("eunit/include/eunit.hrl").
 
 full_parse_test() ->
-  {state, Data} = conf_reader:parse_file("../test/example.conf"),
-  [Arepo,Brepo] = Data,
-  ?assertEqual(Arepo, {"arepo", [{"auser", "RW+"}]}),
-  ?assertEqual(Brepo, {"brepo", [{"jdunphy", "RW+"}, {"auser", "RW+"}]}).
+  {state, Users, Groups} = conf_reader:parse_file("../test/example.conf"),
+  [Arepo,Brepo] = Users,
+  ?assertEqual({"arepo", [{"auser", "RW+"}]}, Arepo),
+  ?assertEqual({"brepo", [{"jdunphy", "RW+"}, {"auser", "RW+"}]}, Brepo),
+  ?assertEqual([{"@group", ["jdunphy","auser"]}], Groups),
+  passed.
 
