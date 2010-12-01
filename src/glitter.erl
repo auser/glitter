@@ -47,13 +47,20 @@ has_git_repos(Name) -> gen_server:call(?SERVER, {has_git_repos, Name}).
 add_config(Proplist) -> gen_server:call(?SERVER, {add_config, Proplist}).
 add_repos(Name) -> gen_server:call(?SERVER, {add_repos, Name}).
 remove_repos(Name) -> gen_server:call(?SERVER, {remove_repos, Name}).
-add_user_to_repos(UserName, Name) -> gen_server:call(?SERVER, {add_user_to_repos, Name, UserName, members}).
-add_user_to_repos(UserName, Name, Type) -> gen_server:call(?SERVER, {add_user_to_repos, Name, UserName, Type}).
-remove_user_from_repos(UserName, Name) -> gen_server:call(?SERVER, {remove_user_from_repos, Name, UserName, members}).
-remove_user_from_repos(UserName, Name, Type) -> gen_server:call(?SERVER, {remove_user_from_repos, Name, UserName, Type}).
-add_user(UserName, Pubkey) -> gen_server:call(?SERVER, {add_new_user_and_key, UserName, Pubkey}).
-make_repos_public(Name) -> gen_server:call(?SERVER, {make_repos_public, Name}).
-make_repos_private(Name) -> gen_server:call(?SERVER, {make_repos_private, Name}).
+add_user_to_repos(UserName, Name) ->
+  gen_server:call(?SERVER, {add_user_to_repos, Name, UserName, members}).
+add_user_to_repos(UserName, Name, Type) ->
+  gen_server:call(?SERVER, {add_user_to_repos, Name, UserName, Type}).
+remove_user_from_repos(UserName, Name) ->
+  gen_server:call(?SERVER, {remove_user_from_repos, Name, UserName, members}).
+remove_user_from_repos(UserName, Name, Type) ->
+  gen_server:call(?SERVER, {remove_user_from_repos, Name, UserName, Type}).
+add_user(UserName, Pubkey) ->
+  gen_server:call(?SERVER, {add_new_user_and_key, UserName, Pubkey}).
+make_repos_public(Name) ->
+  gen_server:call(?SERVER, {make_repos_public, Name}).
+make_repos_private(Name) ->
+  gen_server:call(?SERVER, {make_repos_private, Name}).
 flush() -> gen_server:cast(?SERVER, {flush}).
 reload() -> gen_server:call(?SERVER, {reload}).
 commit() -> gen_server:cast(?SERVER, {commit}).

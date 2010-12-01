@@ -15,17 +15,13 @@
 -endif.
 
 -record (state, {
-  state = none,         % gitosis_config | group_config | repos_config | other
-  configs = []
-}).
+           repos = []
+          }).
 
--record (section, {
-  title = undefined,
-  current_key = [],
-  current_value,        % current parsing value
-  current_values = [],
-  proplist = []
-}).
+-record (repo, {
+           name = undefined,
+           users = []
+          }).
 
 parse_file(FileName)  ->
   {ok, Binary} = file:read_file(FileName),
@@ -34,108 +30,50 @@ parse_file(FileName)  ->
 parse(X) ->
   do_parse(X, #state{}).
 
-%% whitespace, disregard
-do_parse(<<32,Rest/binary>>, State) ->
-  do_parse(Rest, State);
-% This is a comment, let's skip to the next line
-do_parse(<<$#,Rest/binary>>, State) ->
-  do_parse(skip_to_new_line(Rest), State);
-% Newline, skip!
-do_parse(<<$\r,Rest/binary>>, State) -> do_parse(Rest, State);
-do_parse(<<$\n,Rest/binary>>, State) -> do_parse(Rest, State);
-% Starting to parse a config
-do_parse(<<$[,Rest/binary>>, State) ->
-  {NextSection, NewState} = parse_section(Rest, State),
-  do_parse(NextSection, NewState);
-do_parse(<<>>, #state{configs = Config} = _State) ->
-  Config.
 
-% We are in the section parsing now!
-parse_section(<<>>, State) ->
-  {<<>>, State};
-parse_section(Rest, #state{configs = Config} = State) ->
-  {Title, NextLine} = parse_section_title(Rest),
-  {{SectionTitle, SectionProps} = Section, NextSection} = parse_config_section(NextLine, #section{title = Title}),
-
-  NewState = case proplists:get_value(SectionTitle, Config) of
-    undefined -> State#state{configs = lists:flatten([Section|Config])};
-    Current -> State#state{configs = lists:flatten([SectionProps|Current])}
-  end,
-  parse_section(NextSection, NewState).
-
-% Parse the config section
-parse_config_section(<<$[,Rest/binary>>, #section{title = Title, proplist = Proplists} = _Section) ->
-  {{Title, Proplists}, Rest};
-parse_config_section(<<>>, #section{title = Title, proplist = Proplists} = _Section) ->
-  {{Title, Proplists}, <<>>};
-parse_config_section(<<$=,Rest/binary>>, #section{current_key = CurrentKey, proplist = Proplists} = Section) ->
-  CurrentKey1 = erlang:list_to_atom(chomp(CurrentKey)),
-  {Values, NextLine} = parse_values(Rest, [], []),
-  parse_config_section(NextLine, Section#section{
-    current_key = [],
-    current_values = [],
-    current_value = [],
-    proplist = [{CurrentKey1, Values}|Proplists]
-    });
-parse_config_section(<<$#,Rest/binary>>, State) -> parse_config_section(skip_to_new_line(Rest), State);
-
-% If there is a newline, it could mean finish off the current key or it could be an erroneous newline
-parse_config_section(<<$\n,Rest/binary>>, #section{current_key = []} = Section) -> parse_config_section(Rest, Section);
-parse_config_section(<<$\n,Rest/binary>>, #section{current_key = K, current_values = Vals, proplist = Props} = Section) ->
-  parse_config_section(Rest, Section#section{
-    current_key = [],
-    current_values = [],
-    current_value = [],
-    proplist = [{K,Vals}|Props]
-  });
-
-parse_config_section(<<Chr,Rest/binary>>, #section{current_key = CurrentKey} = Section) ->
-  parse_config_section(Rest, Section#section{current_key = [Chr|CurrentKey]});
-
-parse_config_section(<<$\n,Rest/binary>>, #section{} = Section) -> parse_config_section(Rest, Section);
-parse_config_section(<<$\r,Rest/binary>>, #section{} = Section) -> parse_config_section(Rest, Section).
-
-% Parse values
-% hello
-% hello world
-parse_values(<<$\n,Rest/binary>>, Acc, CurrVals) ->
-  Val = case CurrVals of
-    [] -> [chomp(Acc)];
-    _ -> [chomp(Acc)|CurrVals]
-  end,
-  {Val, Rest};
-parse_values(<<32,Rest/binary>>, Acc, CurrVals) ->
-  % Have we started, or is this erroneous whitespace
-  case Acc of
-    [] ->
-      % erroneous
-      parse_values(Rest, Acc, CurrVals);
+do_parse(Bin, State) when is_binary(Bin) ->
+  Chunks = re:split(Bin, "\\n"),
+  do_parse(Chunks, State);
+do_parse([], State) -> State;
+do_parse([First|Lines], State) ->
+  {Type, Data} = parse_line(First),
+  case Type of
+    repo ->
+      {Users, NewLines} = parse_repo_users(Lines),
+      Repo = {Data, Users},
+      NewState = State#state{repos = State#state.repos ++ [Repo]},
+      do_parse(NewLines, NewState);
     _ ->
-      parse_values(Rest, [], [lists:reverse(Acc)|CurrVals])
-  end;
-parse_values(<<>>, Acc, CurrVals) ->
-  Val = case CurrVals of
-    [] -> [chomp(Acc)];
-    _ -> [chomp(Acc)|CurrVals]
-  end,
-  {Val, <<>>};
-parse_values(<<Chr,Rest/binary>>, Acc, CurrVals) ->
-  parse_values(Rest, [Chr|Acc], CurrVals).
+      do_parse(Lines, State)
+  end.
 
-% skip_to_new_line
-skip_to_new_line(Rest) -> skip_to_new_line1(Rest).
-skip_to_new_line1(<<$\n,Rest/binary>>) ->  Rest;
-skip_to_new_line1(<<$r,Rest/binary>>) ->  skip_to_new_line1(Rest);
-skip_to_new_line1(<<>>) ->  <<>>;
-skip_to_new_line1(<<_Ch,Rest/binary>>) -> skip_to_new_line1(Rest).
+parse_line([]) -> {empty, []};
+parse_line(<<$r,$e,$p,$o,Rest/binary>>) ->
+  {repo, string:strip(binary_to_list(Rest))};
+parse_line(<<$#,_/binary>>) ->
+  {comment, undefined};
+parse_line(Line) ->
+  case re:run(Line, "=") of
+    {match, _} ->
+      [_Permission,Name] = re:split(Line, "="),
+      {repo_user, string:strip(binary_to_list(Name))};
+    nomatch -> {wtf, Line}
+  end.
 
-% Parse section titles
-parse_section_title(Bin) -> parse_section_title(Bin, []).
-parse_section_title(<<$],Rest/binary>>, Acc) ->
-  {erlang:list_to_atom(lists:reverse(Acc)), Rest};
-parse_section_title(<<Ch,Rest/binary>>, Acc) ->
-  parse_section_title(Rest, [Ch|Acc]).
 
-% Chomp the string for erroneous whitespace before and after
-chomp(Str) ->
-  lists:reverse(string:strip(Str)).
+parse_repo_users(Lines) ->
+  parse_repo_users(Lines, []).
+
+parse_repo_users([<<$r,$e,$p,$o,_/binary>>|_] = Lines, Users) ->
+  {Users, Lines};
+parse_repo_users([], Users) ->
+  {Users, []};
+parse_repo_users([<<>>|Rest],Users) ->
+  parse_repo_users(Rest, Users);
+parse_repo_users([Line|Rest], Users) ->
+  case(parse_line(Line)) of
+    {repo_user, User} ->
+      NewUsers = Users ++ [User],
+      parse_repo_users(Rest, NewUsers);
+    {_, _} -> parse_repo_users(Rest, Users)
+  end.
