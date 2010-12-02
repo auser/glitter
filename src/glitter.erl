@@ -12,19 +12,18 @@
 
 %% API
 -export ([
-  list_repos/0,
-  flush/0,
-  has_git_repos/1,
-  add_config/1,
-  add_repos/1,
-  remove_repos/1,
-  add_user_to_repos/2,
-  remove_user_from_repos/2,
-  add_user/2,
-  reload/0,
-  commit/0,
-  stop/0
-]).
+          list_repos/0,
+          flush/0,
+          has_git_repos/1,
+          add_repos/1,
+          remove_repos/1,
+          add_user_to_repos/2,
+          remove_user_from_repos/2,
+          add_user/2,
+          reload/0,
+          commit/0,
+          stop/0
+         ]).
 
 -export([start_link/0]).
 
@@ -35,9 +34,9 @@
 -include("glitter.hrl").
 
 -record(state, {
-  gitolite_config,
-  config
-}).
+          gitolite_config,
+          config
+         }).
 -define(SERVER, ?MODULE).
 
 %%====================================================================
@@ -45,7 +44,6 @@
 %%====================================================================
 list_repos() -> gen_server:call(?SERVER, {list_repos}).
 has_git_repos(Name) -> gen_server:call(?SERVER, {has_git_repos, Name}).
-add_config(Proplist) -> gen_server:call(?SERVER, {add_config, Proplist}).
 add_repos(Name) -> gen_server:call(?SERVER, {add_repos, Name}).
 remove_repos(Name) -> gen_server:call(?SERVER, {remove_repos, Name}).
 add_user_to_repos(UserInfo, Name) ->
@@ -59,7 +57,7 @@ reload() -> gen_server:call(?SERVER, {reload}).
 commit() -> gen_server:cast(?SERVER, {commit}).
 
 stop() ->
-   gen_server:cast(?SERVER, {stop}).
+  gen_server:cast(?SERVER, {stop}).
 
 %%--------------------------------------------------------------------
 %% Function: start_link() -> {ok,Pid} | ignore | {error,Error}
@@ -83,9 +81,9 @@ init([]) ->
   {ok, ConfigFile} = application:get_env(glitter, config_file),
   Config = conf_reader:parse_file(ConfigFile),
   {ok, #state{
-    gitolite_config = filename:absname(ConfigFile),
-    config = Config
-  }}.
+     gitolite_config = filename:absname(ConfigFile),
+     config = Config
+    }}.
 
 %%--------------------------------------------------------------------
 %% Function: %% handle_call(Request, From, State) -> {reply, Reply, State} |
@@ -99,9 +97,6 @@ init([]) ->
 handle_call({list_repos}, _From, #state{config = Config} = State) ->
   Reply = handle_list_repos(Config),
   {reply, Reply, State};
-handle_call({add_config, Proplist}, _From, #state{config = Config} = State) ->
-  NewState = handle_add_config(Proplist, Config, State),
-  {reply, ok, NewState};
 handle_call({add_repos, Name}, _From, #state{config = Config} = State) ->
   NewState = handle_add_repos(Name, Config, State),
   {reply, ok, NewState};
@@ -176,17 +171,6 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------
-handle_add_config(Proplist, Config, State) ->
-  NewConfig = case proplists:get_value(gitolite, Config) of
-    undefined ->
-      [{gitolite, Proplist}|Config];
-    GitoliteConfig ->
-      OldConfig = lists:delete(gitolite, Config),
-      [{gitolite, lists:append([Proplist,GitoliteConfig])}|OldConfig]
-  end,
-  NewState = State#state{config = NewConfig},
-  flush(NewState),
-  NewState.
 
 handle_list_repos(Config) ->
   Config#config.repos.
@@ -221,7 +205,7 @@ handle_remove_repos(Name, Config, State) ->
   NewState.
 
 
-% UserInfo -> {"name", "permission"}
+                                                % UserInfo -> {"name", "permission"}
 handle_add_user_to_repos(Name, UserInfo, #state{config = Config} = State) ->
   case find_already_defined_repos(Name, Config) of
     {error, not_found} ->
@@ -260,11 +244,13 @@ handle_remove_user_from_repos(Name, UserName,
       end
   end.
 
-handle_add_new_user_and_key(UserInfo, Pubkey, #state{gitolite_config = ConfigFile} = State) ->
+handle_add_new_user_and_key(UserInfo, Pubkey,
+                            #state{gitolite_config = ConfigFile} = State) ->
   case find_file_by_name(UserInfo, State) of
     {error, not_found} ->
       Dirname = filename:dirname(ConfigFile),
-      PubKeyfile = filename:join([Dirname, "keydir", lists:append(UserInfo, ".pub")]),
+      PubKeyfile =
+        filename:join([Dirname, "keydir", lists:append(UserInfo, ".pub")]),
       {ok, Fd} = file:open(PubKeyfile, [write]),
       file:write(Fd, Pubkey),
       file:close(Fd);
@@ -272,28 +258,6 @@ handle_add_new_user_and_key(UserInfo, Pubkey, #state{gitolite_config = ConfigFil
   end,
   State.
 
-
-handle_change_repos_config(RepoName, ConfigKey, ConfigVal, #state{config = Config} = State) ->
-  case find_already_defined_repos(RepoName, Config) of
-    {error, not_found} -> ok;
-    {ok, Key, ReposConfig} ->
-      NewReposConfig = case proplists:get_value(ConfigKey, ReposConfig) of
-        undefined ->
-          [{ConfigKey, ConfigVal}|ReposConfig];
-        Status ->
-          case Status =:= ConfigVal of
-            false ->
-              OldRepos = proplists:delete(ConfigKey, ReposConfig),
-              [{daemon, ConfigVal}|OldRepos];
-            true -> ReposConfig
-          end
-      end,
-      OldConfig = proplists:delete(Key, Config),
-      NewConfig = [{Key, NewReposConfig}|OldConfig],
-      NewState = State#state{config = NewConfig},
-      flush(NewState),
-      NewState
-  end.
 
 find_already_defined_repos(Name, Config) when is_record(Config, config) ->
   find_already_defined_repos(Name, Config#config.repos);
@@ -321,8 +285,8 @@ find_file_by_name1(Name, [K|Rest]) ->
 handle_commit(ConfigFile) ->
   Dirname = filename:dirname(ConfigFile),
   Command = lists:append(["cd ", Dirname, " && ",
-    "git add . && ",
-    "git commit -a -m 'Updated from glitter'", " && ", "git push origin master"]),
+                          "git add . && ",
+                          "git commit -a -m 'Updated from glitter'", " && ", "git push origin master"]),
   Out = os:cmd(Command),
   io:format("Out: ~p~n", [Out]),
   Out.
