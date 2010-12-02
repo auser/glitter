@@ -15,8 +15,5 @@
   {registered,   []},
   {applications, [kernel, stdlib, sasl]},
   {mod, {glitter_app, []}},
-  {env, [
-    {config_file, "env/gitosis.conf"}
-  ]}
  ]
 }.
