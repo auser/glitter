@@ -14,6 +14,6 @@
   ]},
   {registered,   []},
   {applications, [kernel, stdlib, sasl]},
-  {mod, {glitter_app, []}},
+  {mod, {glitter_app, []}}
  ]
 }.
