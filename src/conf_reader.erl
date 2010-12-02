@@ -10,11 +10,6 @@
 
 -export([parse_file/1,parse/1]).
 
--record (repo, {
-           name = undefined,
-           users = []
-          }).
-
 -include("glitter.hrl").
 
 parse_file(FileName)  ->

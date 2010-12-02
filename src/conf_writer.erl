@@ -7,21 +7,12 @@
 %%%-------------------------------------------------------------------
 
 -module (conf_writer).
--export ([write/2, write/3]).
-
+-export ([write/2]).
 
 write({config, Repos, Groups}, Loc) ->
-  write(Repos, Groups, Loc);
-write(Repos, Loc) ->
-  Binary = format_repos(Repos),
-  file:write_file(Loc, Binary).
-
-write(Repos, Groups, Loc) ->
   {ok, F} = file:open(Loc, [write]),
-  GroupsBin = format_groups(Groups),
-  file:write(F, GroupsBin),
-  ReposBin = format_repos(Repos),
-  file:write(F, ReposBin),
+  file:write(F,format_groups(Groups)),
+  file:write(F,format_repos(Repos)),
   file:close(F),
   ok.
 
@@ -29,11 +20,10 @@ format_groups(Groups) ->
   format_groups(Groups, []).
 
 format_groups([], List) ->
-  list_to_binary(lists:flatten([List, "\n"]));
-format_groups([Group|Rest], List) ->
-  {Name, Users} = Group,
+  list_to_binary(lists:flatten([List]));
+format_groups([{Name, Users}|Rest], List) ->
   UsersText = lists:map(fun(U) -> U ++ " " end, Users),
-  GroupText = lists:flatten(["@", Name, " = ", UsersText, "\n"]),
+  GroupText = lists:flatten(["@", Name, " = ", UsersText, "\n\n"]),
   format_groups(Rest, [GroupText|List]).
 
 

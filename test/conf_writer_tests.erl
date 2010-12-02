@@ -1,6 +1,7 @@
 -module(conf_writer_tests).
 
 -include_lib("eunit/include/eunit.hrl").
+-include("glitter.hrl").
 
 write_config_test_() ->
   {inorder,
@@ -15,8 +16,8 @@ write_config_test_() ->
 with_no_usergroup() ->
   clear_file(),
   Repos = [{"a_repo", [{"user_1", "RW+"}, {"user_2", "R"}]}],
-
-  conf_writer:write(Repos, ?WRITE_TEST),
+  Config = #config{repos = Repos},
+  conf_writer:write(Config, ?WRITE_TEST),
   {ok, File} = file:read_file(?WRITE_TEST),
   ?assertEqual("  repo a_repo\n    RW+ = user_1\n    R = user_2\n\n",
                binary_to_list(File)),
@@ -26,8 +27,8 @@ with_usergroup() ->
   clear_file(),
   Repos = [{"a_repo", [{"@group", "RW+"}]}],
   UserGroups = [{"group", ["user_1", "user_2"]}],
-
-  conf_writer:write(Repos, UserGroups, ?WRITE_TEST),
+  Config = #config{repos = Repos, groups = UserGroups},
+  conf_writer:write(Config, ?WRITE_TEST),
 
   {ok, File} = file:read_file(?WRITE_TEST),
   ?assertEqual("@group = user_1 user_2 \n\n  repo a_repo\n    RW+ = @group\n\n",
