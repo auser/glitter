@@ -37,6 +37,7 @@
           gitolite_config,
           config
          }).
+
 -define(SERVER, ?MODULE).
 
 %%====================================================================
@@ -205,7 +206,7 @@ handle_remove_repos(Name, Config, State) ->
   NewState.
 
 
-                                                % UserInfo -> {"name", "permission"}
+%% UserInfo -> {"name", "permission"}
 handle_add_user_to_repos(Name, UserInfo, #state{config = Config} = State) ->
   case find_already_defined_repos(Name, Config) of
     {error, not_found} ->

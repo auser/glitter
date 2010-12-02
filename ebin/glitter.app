@@ -1,9 +1,18 @@
 {application, glitter,
  [
-  {description, "glitter app"},
-  {vsn, "0.1"},
+  {description, "glitter - Erlang interface for gitolite configs"},
+  {vsn, "0.2"},
   {id, "glitter"},
-  {modules,      []},
+  {modules,      
+  [
+  conf_reader,
+  conf_writer,
+  glitter,
+  glitter_app,
+  glitter_sup,
+  make_boot,
+  reloader
+  ]},
   {registered,   []},
   {applications, [kernel, stdlib, sasl]},
   {mod, {glitter_app, []}},
