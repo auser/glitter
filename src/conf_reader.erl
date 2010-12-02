@@ -10,38 +10,39 @@
 
 -export([parse_file/1,parse/1]).
 
--record (state, {
-           repos = [],
-           groups = []
-          }).
-
 -record (repo, {
            name = undefined,
            users = []
           }).
 
+-include("glitter.hrl").
+
 parse_file(FileName)  ->
-  {ok, Binary} = file:read_file(FileName),
-  parse(Binary).
+  case file:read_file(FileName) of
+    {ok, Binary} ->
+      parse(Binary);
+    {error, _} ->
+      #config{}
+  end.
 
 parse(Binary) ->
   Chunks = re:split(Binary, "\\n"),
-  do_parse(Chunks, #state{}).
+  do_parse(Chunks, #config{}).
 
-do_parse([], State) -> State;
-do_parse([First|Lines], State) ->
+do_parse([], Config) -> Config;
+do_parse([First|Lines], Config) ->
   {Type, Data} = parse_line(First),
   case Type of
     repo ->
       {Users, NewLines} = parse_repo_users(Lines),
       Repo = {Data, Users},
-      NewState = State#state{repos = State#state.repos ++ [Repo]},
-      do_parse(NewLines, NewState);
+      NewConfig = Config#config{repos = Config#config.repos ++ [Repo]},
+      do_parse(NewLines, NewConfig);
     group ->
-      NewState = State#state{groups = State#state.groups ++ [Data]},
-      do_parse(Lines, NewState);
+      NewConfig = Config#config{groups = Config#config.groups ++ [Data]},
+      do_parse(Lines, NewConfig);
     _ ->
-      do_parse(Lines, State)
+      do_parse(Lines, Config)
   end.
 
 parse_line([]) -> {empty, []};
@@ -69,14 +70,13 @@ parse_line(Binary) ->
 parse_repo_users(Lines) ->
   parse_repo_users(Lines, []).
 
-parse_repo_users([<<$r,$e,$p,$o,_/binary>>|_] = Lines, Users) ->
-  {Users, Lines};
 parse_repo_users([], Users) ->
   {Users, []};
 parse_repo_users([<<>>|Rest],Users) ->
   parse_repo_users(Rest, Users);
-parse_repo_users([Line|Rest], Users) ->
+parse_repo_users([Line|Rest] = Lines, Users) ->
   case(parse_line(Line)) of
+    {repo, _} -> {Users, Lines};
     {repo_user, User} ->
       NewUsers = Users ++ [User],
       parse_repo_users(Rest, NewUsers);

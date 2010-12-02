@@ -1,0 +1,4 @@
+-record (config, {
+           repos = [],
+           groups = []
+          }).

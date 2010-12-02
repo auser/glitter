@@ -14,23 +14,23 @@ write_config_test_() ->
 
 with_no_usergroup() ->
   clear_file(),
-  Repos = [{"a_repo", ["user_1", "user_2"]}],
+  Repos = [{"a_repo", [{"user_1", "RW+"}, {"user_2", "R"}]}],
 
-  conf_writer:write(?WRITE_TEST, Repos),
+  conf_writer:write(Repos, ?WRITE_TEST),
   {ok, File} = file:read_file(?WRITE_TEST),
-  ?assertEqual("  repo a_repo\n    RW+ = user_1 user_2 \n\n",
+  ?assertEqual("  repo a_repo\n    RW+ = user_1\n    R = user_2\n\n",
                binary_to_list(File)),
   passed.
 
 with_usergroup() ->
   clear_file(),
-  Repos = [{"a_repo", ["@group"]}],
+  Repos = [{"a_repo", [{"@group", "RW+"}]}],
   UserGroups = [{"group", ["user_1", "user_2"]}],
 
-  conf_writer:write(?WRITE_TEST, Repos, UserGroups),
+  conf_writer:write(Repos, UserGroups, ?WRITE_TEST),
 
   {ok, File} = file:read_file(?WRITE_TEST),
-  ?assertEqual("@group = user_1 user_2 \n\n  repo a_repo\n    RW+ = @group \n\n",
+  ?assertEqual("@group = user_1 user_2 \n\n  repo a_repo\n    RW+ = @group\n\n",
                binary_to_list(File)),
   passed.
 

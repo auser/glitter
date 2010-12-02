@@ -10,11 +10,14 @@
 
 -export ([write/2, write/3]).
 
-write(Loc, Repos) ->
+
+write({config, Repos, Groups}, Loc) ->
+  write(Repos, Groups, Loc);
+write(Repos, Loc) ->
   Binary = format_repos(Repos),
   file:write_file(Loc, Binary).
 
-write(Loc, Repos, Groups) ->
+write(Repos, Groups, Loc) ->
   {ok, F} = file:open(Loc, [write]),
   GroupsBin = format_groups(Groups),
   file:write(F, GroupsBin),
@@ -43,6 +46,8 @@ format_repos([], List) ->
 format_repos([Repo|Rest], List) ->
   {Name, Users} = Repo,
   NameLine = "  repo " ++ Name ++ "\n",
-  UsersText = lists:map(fun(U) -> U ++ " " end, Users),
-  RepoText = lists:flatten([NameLine, "    RW+ = ", UsersText, "\n\n"]),
+  UsersText = lists:map(fun({UName, Permission}) ->
+                            "    " ++ Permission ++ " = " ++ UName ++ "\n"
+                        end, Users),
+  RepoText = lists:flatten([NameLine, UsersText, "\n"]),
   format_repos(Rest, [RepoText|List]).
