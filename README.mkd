@@ -6,8 +6,11 @@ Parse and write configs for the gitolite admin repositories.
 
 ### Status
 
-Parsing is nonfunctional.
-Writing is nonfunctional.
+Parsing is functional.
+Writing is functional.
+
+No API support for user groups yet.
+No support for branch/directory-specific permissions in repositories.
 
 Working on it...
 
