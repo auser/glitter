@@ -22,8 +22,6 @@
   remove_user_from_repos/2,
   add_user/2,
   reload/0,
-  make_repos_public/1,
-  make_repos_private/1,
   commit/0,
   stop/0
 ]).
@@ -56,10 +54,6 @@ remove_user_from_repos(UserName, Name) ->
   gen_server:call(?SERVER, {remove_user_from_repos, Name, UserName}).
 add_user(UserInfo, Pubkey) ->
   gen_server:call(?SERVER, {add_new_user_and_key, UserInfo, Pubkey}).
-make_repos_public(Name) ->
-  gen_server:call(?SERVER, {make_repos_public, Name}).
-make_repos_private(Name) ->
-  gen_server:call(?SERVER, {make_repos_private, Name}).
 flush() -> gen_server:cast(?SERVER, {flush}).
 reload() -> gen_server:call(?SERVER, {reload}).
 commit() -> gen_server:cast(?SERVER, {commit}).
@@ -122,12 +116,6 @@ handle_call({remove_user_from_repos, Name, UserName}, _From, State) ->
   {reply, ok, NewState};
 handle_call({add_new_user_and_key, UserInfo, Pubkey}, _From, State) ->
   NewState = handle_add_new_user_and_key(UserInfo, Pubkey, State),
-  {reply, ok, NewState};
-handle_call({make_repos_public, Name}, _From, State) ->
-  NewState = handle_make_repos_public(Name, State),
-  {reply, ok, NewState};
-handle_call({make_repos_private, Name}, _From, State) ->
-  NewState = handle_make_repos_private(Name, State),
   {reply, ok, NewState};
 handle_call({has_git_repos, Name}, _From, #state{config = Config} = State) ->
   Reply = lists:any(fun(R) -> Name =:= element(1,R) end,
@@ -284,10 +272,6 @@ handle_add_new_user_and_key(UserInfo, Pubkey, #state{gitolite_config = ConfigFil
   end,
   State.
 
-handle_make_repos_public(Name, State) ->
-  handle_change_repos_config(Name, daemon, ["yes"], State).
-handle_make_repos_private(Name, State) ->
-  handle_change_repos_config(Name, daemon, ["no"], State).
 
 handle_change_repos_config(RepoName, ConfigKey, ConfigVal, #state{config = Config} = State) ->
   case find_already_defined_repos(RepoName, Config) of
