@@ -11,6 +11,5 @@ if [[ ! -f ebin/glitter*.boot ]]; then
 fi
 
 erl -pa $PWD/ebin \
-    -s reloader \
     -glitter config_file "\"$CONFIG\"" \
     -boot glitter-$VERSION

@@ -10,8 +10,7 @@
   glitter,
   glitter_app,
   glitter_sup,
-  make_boot,
-  reloader
+  make_boot
   ]},
   {registered,   []},
   {applications, [kernel, stdlib, sasl]},
