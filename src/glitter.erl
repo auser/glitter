@@ -36,7 +36,7 @@
 -include("glitter.hrl").
 
 -record(state, {
-          gitolite_config,
+          config_file,
           config
          }).
 
@@ -88,7 +88,7 @@ init([]) ->
   {ok, ConfigFile} = application:get_env(glitter, config_file),
   Config = conf_reader:parse_file(ConfigFile),
   {ok, #state{
-     gitolite_config = filename:absname(ConfigFile),
+     config_file = filename:absname(ConfigFile),
      config = Config
     }}.
 
@@ -129,7 +129,7 @@ handle_call({has_git_repos, Name}, _From, #state{config = Config} = State) ->
   Reply = lists:any(fun(R) -> Name =:= element(1,R) end,
                     handle_list_repos(Config)),
   {reply, Reply, State};
-handle_call({reload}, _From, #state{gitolite_config = ConfigFile} = State) ->
+handle_call({reload}, _From, #state{config_file = ConfigFile} = State) ->
   Config = conf_reader:parse_file(ConfigFile),
   {reply, ok, State#state{config = Config}};
 handle_call(_Request, _From, State) ->
@@ -147,7 +147,7 @@ handle_cast({stop}, State) ->
 handle_cast({flush}, State) ->
   flush(State),
   {noreply, State};
-handle_cast({commit}, #state{gitolite_config = ConfigFile} = State) ->
+handle_cast({commit}, #state{config_file = ConfigFile} = State) ->
   handle_commit(ConfigFile),
   flush(State),
   Config = conf_reader:parse_file(ConfigFile),
@@ -258,7 +258,7 @@ handle_remove_user_from_repos(Name, UserName,
   end.
 
 handle_add_new_user_and_key(UserInfo, Pubkey,
-                            #state{gitolite_config = ConfigFile} = State) ->
+                            #state{config_file = ConfigFile} = State) ->
   case find_file_by_name(UserInfo, State) of
     {error, not_found} ->
       Dirname = filename:dirname(ConfigFile),
@@ -290,10 +290,10 @@ find_already_defined_repos(Name, Repos) ->
     Result -> {ok, Result}
   end.
 
-flush(#state{config = Config, gitolite_config = ConfigFile} = _State) ->
+flush(#state{config = Config, config_file = ConfigFile} = _State) ->
   conf_writer:write(Config, ConfigFile).
 
-find_file_by_name(Name, #state{gitolite_config = ConfigFile} = _State) ->
+find_file_by_name(Name, #state{config_file = ConfigFile} = _State) ->
   {ok, Files} = file:list_dir(filename:dirname(ConfigFile)),
   find_file_by_name1(Name, Files).
 
