@@ -3,14 +3,11 @@ Glitter
 
 Parse and write configs for the gitolite admin repositories.
 
-
 ### Status
 
 Parsing is functional.
 Writing is functional.
 
-No API support for user groups yet.
 No support for branch/directory-specific permissions in repositories.
-
-Working on it...
-
+At the moment, I don't really have a need for it, so it probably won't
+get worked on.

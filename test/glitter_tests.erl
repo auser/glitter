@@ -39,7 +39,8 @@ readwrite_glitter_test_() ->
      fun remove_repos/0,
      fun add_user_to_repos/0,
      fun add_user_to_repos_that_doesnt_exist/0,
-     fun remove_user_from_repos/0
+     fun remove_user_from_repos/0,
+     fun set_and_list_groups/0
     ]
    }
   }.
@@ -101,3 +102,20 @@ remove_user_from_repos() ->
   {config, UpdatedRepos, _} = conf_reader:parse_file(?TEST_FILE),
   UpdatedUsers = proplists:get_value("removetest", UpdatedRepos),
   ?assertEqual([{"b", "RW+"}], UpdatedUsers).
+
+set_and_list_groups() ->
+  glitter:set_group("@agroup", ["a", "b"]),
+  Groups = glitter:list_groups(),
+  ?assertEqual(["a","b"], proplists:get_value("@agroup", Groups)),
+
+  glitter:set_group("@agroup", ["d", "b"]),
+  ResetGroups = glitter:list_groups(),
+  ?assertEqual(["d","b"], proplists:get_value("@agroup", ResetGroups)),
+  ?assertEqual(1, length(glitter:list_groups())),
+
+  glitter:set_group("@bgroup", ["a", "b"]),
+  ?assertEqual(["a","b"], proplists:get_value("@bgroup", glitter:list_groups())),
+  ?assertEqual(2, length(glitter:list_groups())),
+  passed.
+
+

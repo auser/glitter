@@ -20,6 +20,8 @@
           add_user_to_repos/2,
           remove_user_from_repos/2,
           add_user/2,
+          list_groups/0,
+          set_group/2,
           reload/0,
           commit/0,
           stop/0
@@ -53,6 +55,10 @@ remove_user_from_repos(UserName, Name) ->
   gen_server:call(?SERVER, {remove_user_from_repos, Name, UserName}).
 add_user(UserInfo, Pubkey) ->
   gen_server:call(?SERVER, {add_new_user_and_key, UserInfo, Pubkey}).
+set_group(Name, Users) ->
+  gen_server:call(?SERVER, {set_group, Name, Users}).
+list_groups() ->
+  gen_server:call(?SERVER, {list_groups}).
 flush() -> gen_server:cast(?SERVER, {flush}).
 reload() -> gen_server:call(?SERVER, {reload}).
 commit() -> gen_server:cast(?SERVER, {commit}).
@@ -112,6 +118,12 @@ handle_call({remove_user_from_repos, Name, UserName}, _From, State) ->
   {reply, ok, NewState};
 handle_call({add_new_user_and_key, UserInfo, Pubkey}, _From, State) ->
   NewState = handle_add_new_user_and_key(UserInfo, Pubkey, State),
+  {reply, ok, NewState};
+handle_call({list_groups}, _From, #state{config = Config} = State) ->
+  Reply = handle_list_groups(Config),
+  {reply, Reply, State};
+handle_call({set_group, Name, Users}, _From, State) ->
+  NewState = handle_set_group(Name, Users, State),
   {reply, ok, NewState};
 handle_call({has_git_repos, Name}, _From, #state{config = Config} = State) ->
   Reply = lists:any(fun(R) -> Name =:= element(1,R) end,
@@ -258,6 +270,16 @@ handle_add_new_user_and_key(UserInfo, Pubkey,
     {ok, _Pubname}  -> ok
   end,
   State.
+
+handle_list_groups(Config) ->
+  Config#config.groups.
+
+handle_set_group(Name, Users,
+                    #state{config = Config} = State) ->
+  Groups = Config#config.groups,
+  NewGroups = proplists:delete(Name, Groups),
+  UpdatedGroups = [{Name, Users}| NewGroups],
+  State#state{config = Config#config{groups = UpdatedGroups}}.
 
 
 find_already_defined_repos(Name, Config) when is_record(Config, config) ->
