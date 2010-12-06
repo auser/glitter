@@ -290,10 +290,10 @@ find_already_defined_repos(Name, Repos) ->
     Result -> {ok, Result}
   end.
 
-flush(#state{config = Config, config_file = ConfigFile} = _State) ->
+flush(#state{config = Config, config_file = ConfigFile}) ->
   conf_writer:write(Config, ConfigFile).
 
-find_file_by_name(Name, #state{config_file = ConfigFile} = _State) ->
+find_file_by_name(Name, #state{config_file = ConfigFile}) ->
   {ok, Files} = file:list_dir(filename:dirname(ConfigFile)),
   find_file_by_name1(Name, Files).
 
