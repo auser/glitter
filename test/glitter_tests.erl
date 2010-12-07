@@ -1,31 +1,33 @@
 -module(glitter_tests).
 
 -include_lib("eunit/include/eunit.hrl").
+-define(TEST_FILE, "../test/test.conf").
 
 setup() ->
   ok = application:set_env(glitter, config_file, "../test/example.conf"),
   glitter:start_link().
 
--define(TEST_FILE, "../test/test.conf").
-
 writable_setup() ->
   file:delete(?TEST_FILE),
   ok = application:set_env(glitter, config_file, ?TEST_FILE),
-  glitter:stop(),
-  timer:sleep(100),
   glitter:start_link().
 
 teardown(_) ->
+  glitter:stop(),
+  timer:sleep(100),
   file:delete("../test/test.conf").
 
 %% Starting with a decent config file, that we don't write over.
 readonly_glitter_test_() ->
   {inorder,
-   [
+   {setup,
     fun setup/0,
-    fun list_repos/0,
-    fun has_git_repos/0
-   ]
+    fun teardown/1,
+    [
+     fun list_repos/0,
+     fun has_git_repos/0
+    ]
+   }
   }.
 
 %% reading and writing a config file for testing
@@ -118,4 +120,8 @@ set_and_list_groups() ->
   ?assertEqual(2, length(glitter:list_groups())),
   passed.
 
-
+config_arg_test() ->
+  glitter:start_link([{config_file, "../test/argtest.conf"}]),
+  [{"argtest", _}] = glitter:list_repos(),
+  teardown(go),
+  passed.
