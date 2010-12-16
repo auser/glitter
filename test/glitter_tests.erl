@@ -59,7 +59,7 @@ has_git_repos() ->
 
 add_repos() ->
   ?assertNot(glitter:has_git_repos("first")),
-  glitter:add_repos("first"),
+  ok = glitter:add_repos("first"),
   ?assert(glitter:has_git_repos("first")),
   ?assertEqual(1, length(glitter:list_repos())),
 
@@ -75,7 +75,7 @@ add_repos() ->
 remove_repos() ->
   ?assertEqual(2, length(glitter:list_repos())),
   ?assert(glitter:has_git_repos("second")),
-  glitter:remove_repos("second"),
+  ok = glitter:remove_repos("second"),
   ?assertNot(glitter:has_git_repos("second")),
   ?assertEqual(1, length(glitter:list_repos())).
 

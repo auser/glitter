@@ -13,7 +13,6 @@
 %% API
 -export ([
           list_repos/0,
-          flush/0,
           has_git_repos/1,
           add_repos/1,
           remove_repos/1,
@@ -45,34 +44,128 @@
 %%====================================================================
 %% API
 %%====================================================================
+
+
+%% @type repo() = {Name, [user_info()]}.
+%%    Describes a repository and any users associated with it.
+%% @type user_info() = {Username, Permissions},
+%%         Username    = string(),
+%%         Permissions = string().
+%%   Describes necessary info for repo permissions. Permissions are
+%%    generally "RW", "RW+" or "R".
+%%
+%% @type group() = {Name, [User]},
+%%       Name = string(),
+%%       User = string().
+%%  User groups as defined by gitolite.  Name should always begin with ``@''.
+
+
+%%--------------------------------------------------------------------
+%% @doc  Returns a list of repo information.
+%% @spec list_repos() -> [repo()]
+%% @end
+%%--------------------------------------------------------------------
 list_repos() -> gen_server:call(?SERVER, {list_repos}).
+
+%%--------------------------------------------------------------------
+%% @doc  Checks if repo is found in gitolite
+%% @spec has_git_repos(Name) -> true | false
+%% @end
+%%--------------------------------------------------------------------
 has_git_repos(Name) -> gen_server:call(?SERVER, {has_git_repos, Name}).
+
+%%--------------------------------------------------------------------
+%% @doc Adds new repository entry to gitolite.conf.  Won't create
+%%      anything if repository already exists.
+%% @spec add_repos(Name) -> ok
+%% @end
+%%--------------------------------------------------------------------
 add_repos(Name) -> gen_server:call(?SERVER, {add_repos, Name}).
+
+%%--------------------------------------------------------------------
+%% @doc Removes repository entry to gitolite.conf
+%% @spec remove_repos(Name) -> ok
+%% @end
+%%--------------------------------------------------------------------
 remove_repos(Name) -> gen_server:call(?SERVER, {remove_repos, Name}).
+
+%%--------------------------------------------------------------------
+%% @doc Adds user and permsissions to specified repo.  If repo does not
+%%      exist, this will also add_repos(Name).
+%% @spec add_user_to_repos(UserInfo, Name) -> ok
+%%       UserInfo = user_info()
+%% @end
+%%--------------------------------------------------------------------
 add_user_to_repos(UserInfo, Name) ->
   gen_server:call(?SERVER, {add_user_to_repos, Name, UserInfo}).
+
+%%--------------------------------------------------------------------
+%% @doc Removes user_info() from specified repo.
+%% @spec remove_user_from_repos(UserName, Name) -> ok
+%% @end
+%%--------------------------------------------------------------------
 remove_user_from_repos(UserName, Name) ->
   gen_server:call(?SERVER, {remove_user_from_repos, Name, UserName}).
-add_user(UserInfo, Pubkey) ->
-  gen_server:call(?SERVER, {add_new_user_and_key, UserInfo, Pubkey}).
+
+%%--------------------------------------------------------------------
+%% @doc  Add user's public ssh key to the gitolite admin repo.
+%% @spec add_user(Username, Pubkey) -> ok
+%% @end
+%%--------------------------------------------------------------------
+add_user(Username, Pubkey) ->
+  gen_server:call(?SERVER, {add_new_user_and_key, Username, Pubkey}).
+
+%%--------------------------------------------------------------------
+%% @doc  Creates a gitolite user group.  Groups are basically ``@group'' =
+%%       user1 user2.  They can then be used as a user by calling
+%%       add_user_to_repos({``@group'', Permissions}, Name)
+%% @spec set_group(Name, Users) -> ok
+%%       Users = [string()]
+%% @end
+%%--------------------------------------------------------------------
 set_group(Name, Users) ->
   gen_server:call(?SERVER, {set_group, Name, Users}).
+
+%%--------------------------------------------------------------------
+%% @doc  Returns a list of group key/value pairs
+%% @spec list_groups() -> [group()]
+%% @end
+%%--------------------------------------------------------------------
 list_groups() ->
   gen_server:call(?SERVER, {list_groups}).
-flush() -> gen_server:cast(?SERVER, {flush}).
+
+%%--------------------------------------------------------------------
+%% @doc Reloads repo and user info from the gitolite admin config file.
+%% @end
+%%--------------------------------------------------------------------
 reload() -> gen_server:call(?SERVER, {reload}).
+
+%%--------------------------------------------------------------------
+%% @doc Performs a git commit and push to actually publish changes
+%%      made to the gitolite config by glitter.
+%% @end
+%%--------------------------------------------------------------------
 commit() -> gen_server:cast(?SERVER, {commit}).
 
 stop() ->
   gen_server:cast(?SERVER, {stop}).
 
 %%--------------------------------------------------------------------
-%% Function: start_link() -> {ok,Pid} | ignore | {error,Error}
-%% Description: Starts the server
+%% @doc
+%%  Starts the server
+%% @spec start_link() -> {ok,Pid} | ignore | {error,Error}
+%% @end
 %%--------------------------------------------------------------------
 start_link() ->
   start_link([]).
 
+
+%%--------------------------------------------------------------------
+%% @doc
+%%  Starts the server. Args are passed to init(Args).
+%% @spec start_link(Args) -> {ok,Pid} | ignore | {error,Error}
+%% @end
+%%-------------------------------------------------------------------
 start_link(Args) ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, Args, []).
 %%====================================================================
@@ -80,6 +173,7 @@ start_link(Args) ->
 %%====================================================================
 
 %%--------------------------------------------------------------------
+%% @private
 %% Function: init(Args) -> {ok, State} |
 %%                         {ok, State, Timeout} |
 %%                         ignore               |
@@ -100,6 +194,7 @@ init(Args) ->
 
 
 %%--------------------------------------------------------------------
+%% @private
 %% Function: %% handle_call(Request, From, State) -> {reply, Reply, State} |
 %%                                      {reply, Reply, State, Timeout} |
 %%                                      {noreply, State} |
@@ -144,6 +239,7 @@ handle_call(_Request, _From, State) ->
   {reply, Reply, State}.
 
 %%--------------------------------------------------------------------
+%% @private
 %% Function: handle_cast(Msg, State) -> {noreply, State} |
 %%                                      {noreply, State, Timeout} |
 %%                                      {stop, Reason, State}
@@ -163,6 +259,7 @@ handle_cast(_Msg, State) ->
   {noreply, State}.
 
 %%--------------------------------------------------------------------
+%% @private
 %% Function: handle_info(Info, State) -> {noreply, State} |
 %%                                       {noreply, State, Timeout} |
 %%                                       {stop, Reason, State}
@@ -172,6 +269,7 @@ handle_info(_Info, State) ->
   {noreply, State}.
 
 %%--------------------------------------------------------------------
+%% @private
 %% Function: terminate(Reason, State) -> void()
 %% Description: This function is called by a gen_server when it is about to
 %% terminate. It should be the opposite of Module:init/1 and do any necessary
@@ -182,6 +280,7 @@ terminate(_Reason, _State) ->
   ok.
 
 %%--------------------------------------------------------------------
+%% @private
 %% Func: code_change(OldVsn, State, Extra) -> {ok, NewState}
 %% Description: Convert process state when code is changed
 %%--------------------------------------------------------------------
@@ -264,13 +363,13 @@ handle_remove_user_from_repos(Name, UserName,
       end
   end.
 
-handle_add_new_user_and_key(UserInfo, Pubkey,
+handle_add_new_user_and_key(UserName, Pubkey,
                             #state{config_file = ConfigFile} = State) ->
-  case find_file_by_name(UserInfo, State) of
+  case find_file_by_name(UserName, State) of
     {error, not_found} ->
       Dirname = filename:dirname(ConfigFile),
       PubKeyfile =
-        filename:join([Dirname, "keydir", lists:append(UserInfo, ".pub")]),
+        filename:join([Dirname, "keydir", lists:append(UserName, ".pub")]),
       {ok, Fd} = file:open(PubKeyfile, [write]),
       file:write(Fd, Pubkey),
       file:close(Fd);
@@ -316,7 +415,8 @@ handle_commit(ConfigFile) ->
   Dirname = filename:dirname(ConfigFile),
   Command = lists:append(["cd ", Dirname, " && ",
                           "git add . && ",
-                          "git commit -a -m 'Updated from glitter'", " && ", "git push origin master"]),
+                          "git commit -a -m 'Updated from glitter'", " && ",
+                          "git push origin master"]),
   Out = os:cmd(Command),
   io:format("Out: ~p~n", [Out]),
   Out.
